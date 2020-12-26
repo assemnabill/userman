@@ -1,24 +1,13 @@
 "use strict";
 // Importiert die statische Variable "axios" und den Typ "AxiosResponse"
 // Bitte vor dem Ausführen auskommentieren und nur während dem Programmieren drinnen lassen....
-// import axios, {AxiosResponse} from "axios";
-class User {
-    constructor() {
-        this.firstName = "";
-        this.lastName = "";
-        this.email = "";
-        this.password = "";
-    }
-}
+// import axios, {AxiosResponse} from 'axios';
 const out = document.getElementById("out");
 const createForm = document.getElementById('createForm');
 const usersTable = document.getElementById("usersTable");
 let editSection = document.getElementById("editSection");
 let users = [];
 let user;
-function setUser(index) {
-    user = users[index];
-}
 document.addEventListener("DOMContentLoaded", () => {
     loadUsers();
     createForm.addEventListener('submit', (event) => {
@@ -27,19 +16,17 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     editSection.addEventListener('submit', (event) => {
         event.preventDefault();
-        const target = event.target;
-        const userindex = Number(target.dataset.index);
-        updateUser(userindex);
+        updateUser();
     });
     usersTable.addEventListener("click", (event) => {
         event.preventDefault();
         const target = event.target;
         const index = Number(target.dataset.index);
+        setUser(index);
         if (target.matches(".fa-trash")) {
             deleteUser(index);
         }
-        else {
-            setUser(index);
+        else if (target.matches(".fa-pen")) {
             renderEditSection();
         }
     });
@@ -49,19 +36,18 @@ function createUser() {
     const lastName = document.getElementById("inputSurname").value.trim();
     const email = document.getElementById("inputEmail1").value.trim();
     const password = document.getElementById("inputPassword1").value.trim();
-    let user = new User();
-    user.firstName = firstName;
-    user.lastName = lastName;
-    user.email = email;
-    user.password = password;
+    let user = {
+        firstName: firstName,
+        lastName: lastName,
+        email: email,
+        password: password,
+    };
     if (users.every(user => user.email != email)) {
-        axios.post("https://jsonplaceholder.typicode.com/users", user)
+        axios.post("/users", user)
             .then((value) => {
-            console.log(value);
-            users.push(user);
             notify("Successfully created user: " + user.firstName + " " + user.lastName);
-            renderChanges();
             createForm.reset();
+            loadUsers();
         })
             .catch((reason) => {
             notify("Something went wrong. Error: " + reason, true);
@@ -71,7 +57,7 @@ function createUser() {
         notify("This email already exists.", true);
     }
 }
-function updateUser(userindex) {
+function updateUser() {
     const firstName = document.getElementById("editName").value.trim();
     const lastName = document.getElementById("editSurname").value.trim();
     const email = document.getElementById("editEmail1").value.trim();
@@ -84,12 +70,12 @@ function updateUser(userindex) {
     if (email && user.email != email) {
         user.email = email;
     }
-    axios.patch("https://jsonplaceholder.typicode.com/users/" + userindex, user)
+    axios.patch("users/" + user.id, user)
         .then((value) => {
         console.log(value);
-        notify("Successfully updated user: " + user.firstName + " " + user.lastName);
-        renderChanges();
         createForm.reset();
+        notify("Successfully updated user: " + user.firstName + " " + user.lastName);
+        loadUsers();
     })
         .catch((reason) => {
         notify("Something went wrong. Error: " + reason, true);
@@ -97,14 +83,26 @@ function updateUser(userindex) {
     editSection.innerHTML = " ";
 }
 function deleteUser(index) {
-    axios.delete("https://jsonplaceholder.typicode.com/users/" + index)
+    if (createForm) {
+        createForm.innerHTML = " ";
+    }
+    axios.delete("users/" + index)
         .then((value) => {
         notify("Successfully deleted user: " + users[index].firstName + " " + users[index].lastName);
-        users.splice(index, 1);
+        loadUsers();
+    }).catch((reason) => {
+        notify("Something went wrong. Error: " + reason, true);
+    });
+}
+function loadUsers() {
+    axios.get("/users")
+        .then((value) => {
+        users = value.data;
         renderChanges();
     }).catch((reason) => {
         notify("Something went wrong. Error: " + reason, true);
     });
+    console.log(users);
 }
 function renderEditSection() {
     editSection.innerHTML = " ";
@@ -137,24 +135,6 @@ function renderEditSection() {
     // @ts-ignore
     emailField.value = user.email;
 }
-function loadUsers() {
-    axios.get("https://jsonplaceholder.typicode.com/users")
-        .then((value) => {
-        for (let i = 0; i < value.data.length; i++) {
-            let user = new User();
-            const name = value.data[i].name;
-            const names = name.split(' ');
-            user.firstName = names[0];
-            user.lastName = names[1];
-            user.email = value.data[i].email;
-            users.push(user);
-        }
-        renderChanges();
-    }).catch((reason) => {
-        notify("Something went wrong. Error: " + reason, true);
-    });
-    console.log(users);
-}
 function renderChanges() {
     let table = document.getElementById("usersTable");
     table.innerHTML = " ";
@@ -165,7 +145,7 @@ function renderChanges() {
             <tr>
             <th scope="row">
                 <button class="btn btn-primary">
-                <i class="fas fa-trash" data-index="${i}"></i>
+                <i class="fas fa-trash" data-index="${i}" id="del_${i}"></i>
                 </button>
                 <button class="btn btn-primary" >
                 <i class="fas fa-pen" data-index="${i}"></i>
@@ -178,6 +158,10 @@ function renderChanges() {
             </td>`;
         table.appendChild(row);
     }
+}
+function setUser(index) {
+    user = users[index];
+    user.id = index;
 }
 function notify(msg, error = false) {
     if (error) {
