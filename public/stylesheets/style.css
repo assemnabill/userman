@@ -1,0 +1,31 @@
+body {
+  padding: 50px;
+  font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
+}
+
+.title {
+  padding: 50px;
+  text-space: 5px;
+  font-family: Verdana sans-serif;
+  font-size: 24pt;
+  font-weight: bold;
+  color: black;
+}
+
+.btn-primary {
+  color: #fff;
+  background-color: black;
+  border-color: black;
+}
+
+.nav-pills .nav-link.active,
+.nav-pills .show > .nav-link {
+  color: #fff;
+  background-color: grey;
+}
+
+a {
+  color: grey;
+  text-decoration: none;
+  background-color: transparent;
+}
