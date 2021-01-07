@@ -92,14 +92,15 @@ router.get("/:nr", (req: express.Request, res: express.Response) => {
 
 router.post("/", (req: express.Request, res: express.Response) => {
     const userObj = req.body;
-    let tmp = {
+    let user = {
         firstName: userObj.firstName,
         lastName: userObj.lastName,
         email: userObj.email,
         password: userObj.password,
     }
-    usersList.push(tmp);
-    res.json(tmp);
+    usersList.push(user);
+    res.status(201);
+    res.json(user);
 });
 
 
@@ -107,14 +108,27 @@ router.patch("/:nr", (req: express.Request, res: express.Response) => {
     const nr = Number(req.params.nr);
     const input = req.body;
     let userObj = usersList[nr];
-    if (!userObj) {
+    if (userObj == null) {
         res.status(404).send('Account not found.')
     }
     userObj.firstName = input.firstName;
     userObj.lastName = input.lastName;
     userObj.email = input.email;
-    res.json(userObj);
 
+    if (input.newPassword && input.password.length > 1){
+        // check if old password is correct
+        if (userObj.password === input.oldPassword){
+            // check if new password is not the same as current password
+            if (userObj.password !== input.newPassword){
+                userObj.password = input.newPassword;
+            } else {
+                res.status(406).send('New password is identical with the old password.');
+            }
+        } else {
+            res.status(406).send('Old password is incorrect.');
+        }
+    }
+    res.sendStatus(202);
 });
 
 
@@ -123,7 +137,7 @@ router.delete("/:nr", (req: express.Request, res: express.Response) => {
     let userObj = usersList[nr];
     if (userObj) {
         usersList.splice(nr, 1);
-        res.json(userObj);
+        res.sendStatus(204);
     }
 });
 

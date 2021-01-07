@@ -3,13 +3,19 @@
 // import axios, {AxiosResponse} from 'axios';
 
 
-const out: HTMLElement = <HTMLElement>document.getElementById("out");
+const out: HTMLDivElement = document.getElementById("out") as HTMLDivElement;
 const createForm: HTMLFormElement = document.getElementById('createForm') as HTMLFormElement;
-const usersTable: HTMLFormElement = document.getElementById("usersTable") as HTMLFormElement;
-let editSection: HTMLElement = <HTMLElement>document.getElementById("editSection");
+const usersTable: HTMLTableElement = document.getElementById("usersTable") as HTMLTableElement;
+let editSection: HTMLDivElement = document.getElementById("editSection") as HTMLDivElement;
+let createTab: HTMLElement = document.getElementById("pills-create-tab") as HTMLElement;
 
 let users: User[] = [];
-let user: any;
+let user: any = {
+    firstName: "",
+    lastName: "",
+    email: "",
+    id: 0,
+};
 
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -19,11 +25,6 @@ document.addEventListener("DOMContentLoaded", () => {
     createForm.addEventListener('submit', (event: Event) => {
         event.preventDefault();
         createUser();
-    });
-
-    editSection.addEventListener('submit', (event: Event) => {
-        event.preventDefault();
-        updateUser();
     });
 
     usersTable.addEventListener("click", (event: Event) => {
@@ -36,6 +37,11 @@ document.addEventListener("DOMContentLoaded", () => {
         } else if (target.matches(".fa-pen")) {
             renderEditSection();
         }
+    });
+
+    createTab.addEventListener("click", (event: Event) => {
+        event.preventDefault();
+        editSection.innerHTML = " ";
     });
 
 
@@ -61,7 +67,7 @@ function createUser() {
                 loadUsers();
             })
             .catch((reason: any) => {
-                notify("Something went wrong. Error: " + reason, true);
+                notify("Something went wrong. " + reason, true);
             });
     } else {
         notify("This email already exists.", true);
@@ -72,6 +78,8 @@ function updateUser() {
     const firstName: string = (document.getElementById("editName") as HTMLInputElement).value.trim();
     const lastName: string = (document.getElementById("editSurname") as HTMLInputElement).value.trim();
     const email: string = (document.getElementById("editEmail1") as HTMLInputElement).value.trim();
+    const oldPassword: string = (document.getElementById("oldPassword") as HTMLInputElement).value.trim();
+    const newPassword: string = (document.getElementById("password2") as HTMLInputElement).value.trim();
 
     if (firstName) {
         user.firstName = firstName;
@@ -83,29 +91,38 @@ function updateUser() {
         user.email = email;
     }
 
+    if (newPassword && newPassword.length > 1) {
+        if (oldPassword !== newPassword) {
+            user.newPassword = newPassword;
+            user.oldPassword = oldPassword;
+        } else {
+            notify("Please enter a different password than the current one.", true);
+            return;
+        }
+    }
+
     axios.patch("users/" + user.id, user)
         .then((value: AxiosResponse) => {
-            console.log(value);
             createForm.reset();
             notify("Successfully updated user: " + user.firstName + " " + user.lastName);
             loadUsers();
         })
         .catch((reason: any) => {
-            notify("Something went wrong. Error: " + reason, true);
+            notify("Something went wrong. " + reason, true);
         });
     editSection.innerHTML = " ";
 }
 
 function deleteUser(index: number) {
-    if(createForm){
-        createForm.innerHTML = " ";
+    if (editSection) {
+        editSection.innerHTML = " ";
     }
     axios.delete("users/" + index)
         .then((value: AxiosResponse) => {
             notify("Successfully deleted user: " + users[index].firstName + " " + users[index].lastName);
             loadUsers();
         }).catch((reason: any) => {
-        notify("Something went wrong. Error: " + reason, true);
+        notify("Something went wrong. " + reason, true);
     });
 }
 
@@ -115,15 +132,15 @@ function loadUsers(): void {
             users = value.data;
             renderChanges();
         }).catch((reason: any) => {
-        notify("Something went wrong. Error: " + reason, true);
+        notify("Something went wrong. " + reason, true);
     });
-    console.log(users);
 }
 
 function renderEditSection() {
     editSection.innerHTML = " ";
     editSection.innerHTML += `
-           <form id="editForm">
+          <form id="editForm" action="/newaccount" method=post
+              oninput='password2.setCustomValidity(password2.value !== password1.value ? "Passwords do not match." : "")'>
           <div class="form-group">
             <label for="editName">First Name</label>
             <input type="text" class="form-control" id="editName" name="firstName" required>
@@ -136,9 +153,43 @@ function renderEditSection() {
             <label for="editEmail1">Email address</label>
             <input type="email" class="form-control" id="editEmail1" name="email" required>
           </div>
+          
+          <div onclick="return false;">
+            <div id="accordion">
+              <div class="card">
+                <div class="card-header" id="headingOne">
+                  <h5 class="mb-0">
+                    <button class="btn btn-link" data-toggle="collapse" data-target="#passwordCollapse" 
+                            aria-expanded="true" aria-controls="passwordCollapse" style="padding: 0px;">
+                      Change Password
+                    </button>
+                  </h5>
+                </div>
+            
+                <div id="passwordCollapse" class="collapse" aria-labelledby="headingOne" data-parent="#accordion">
+                  <div class="card-body">
+                      <div class="form-group">
+                        <label for="oldPassword">Old Password:</label>
+                        <input id="oldPassword" class="form-control" type="password" name="oldPassword">
+                      </div>
+                      <div class="form-group">
+                        <label for="password1">New Password:</label>
+                        <input id="password1" class="form-control" type=password name="password1">
+                      </div>
+                      <div class="form-group">
+                        <label for="password2">Confirm password:</label>
+                        <input id="password2" class="form-control" type=password name="password2">
+                      </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <div class="form-group text-center">
-            <button type="submit" class="btn btn-primary">Save Changes</button>
+            <button id="saveBtn" type="submit" class="btn btn-primary" style="margin-top: 10px;">
+            Save Changes
+            </button>
           </div>
         </form>`;
 
@@ -151,6 +202,12 @@ function renderEditSection() {
     let emailField = <HTMLElement>document.getElementById("editEmail1");
     // @ts-ignore
     emailField.value = user.email;
+
+    const editForm: HTMLFormElement = document.getElementById('editForm') as HTMLFormElement;
+    editForm.addEventListener("submit", (event: Event) => {
+        event.preventDefault();
+        updateUser();
+    });
 }
 
 function renderChanges() {
@@ -158,15 +215,14 @@ function renderChanges() {
     table.innerHTML = " ";
     for (let i: number = 0; i < users.length; i++) {
         const user: User = users[i];
-        const row: HTMLElement = document.createElement("tr");
         table.innerHTML += `
             <tr>
             <th scope="row">
-                <button class="btn btn-primary">
+                <button class="btn btn-primary" style="background-color: #f54153;">
                 <i class="fas fa-trash" data-index="${i}" id="del_${i}"></i>
                 </button>
                 <button class="btn btn-primary" >
-                <i class="fas fa-pen" data-index="${i}"></i>
+                <i class="fas fa-pen" data-index="${i}" id="edit_${i}"></i>
                 </button>
             </th>
             <td>${user.firstName}</td>
@@ -174,7 +230,6 @@ function renderChanges() {
             <td>${user.email}</td>
           </tr>
             </td>`;
-        table.appendChild(row);
     }
 }
 
@@ -184,11 +239,18 @@ function setUser(index: number) {
 }
 
 function notify(msg: string, error: boolean = false) {
+    out.innerHTML = "";
     if (error) {
-        out.className = "alert alert-danger";
+        out.className = "alert alert-danger alert-dismissible fade show";
     } else {
-        out.className = "alert alert-success";
+        out.className = "alert alert-success alert-dismissible fade show";
     }
-    out.innerText = msg;
+    out.innerText = msg
+    const closBtn: HTMLElement = document.createElement("div");
+    closBtn.innerHTML = `
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>`;
+    out.appendChild(closBtn);
 }
 

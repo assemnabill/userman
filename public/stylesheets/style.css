@@ -12,6 +12,11 @@ body {
   color: black;
 }
 
+.btn-link {
+  font-weight: 500;
+  color: #000000;
+}
+
 .btn-primary {
   color: #fff;
   background-color: black;
@@ -21,7 +26,9 @@ body {
 .nav-pills .nav-link.active,
 .nav-pills .show > .nav-link {
   color: #fff;
-  background-color: grey;
+  background-color: black;
+  font-weight: 500;
+
 }
 
 a {
